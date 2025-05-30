@@ -5,9 +5,10 @@ import musicLibrary
 import requests
 import subprocess
 import time
+import re
 
 
-
+question = ["what","how","when","where","tell me","can you","who"]
 engine = pyttsx3.init()
 newsapi = "44c6abf73f304d4c9e8297817de4834c"
 voices = engine.getProperty('voices')
@@ -16,6 +17,25 @@ engine.setProperty('voice',voices[1].id)
 def speak(text):
   engine.say(text)
   engine.runAndWait()
+  import requests
+def clear_response(statement):
+     return re.sub(r"[*_`]+", "", statement)
+def ask_local_llm(prompt):
+    url = "http://localhost:11434/api/generate"
+    data = {
+        "model": "llama3.2:latest",  # change this if you installed another model like deepseek
+        "prompt": prompt,
+        "stream": False     # stream False means full response in one go
+    }
+    try:
+        response = requests.post(url, json=data)
+        if response.status_code == 200:
+            return response.json()["response"].strip()
+        else:
+            return "Sorry bhai, model se response nahi aaya."
+    except Exception as e:
+        return f"LLM error: {e}"
+
 def close_process_with_grace(process_name, wait_seconds=5):
     # Step 1: Gracefully close (taskkill without /F)
     subprocess.run(["taskkill", "/IM", process_name], shell=True)
@@ -74,7 +94,13 @@ def processCommand(command):
             data = r.json()
             articles = data.get('articles',[])
             for article in articles:
-                speak(article['title'])        
+                speak(article['title']) 
+    else:
+      for word in question:
+        if word in command:
+              answer = ask_local_llm(command)
+              speak(clear_response(answer))
+      
         
 if __name__ == "__main__":
     speak("INITIALIZING FRIDAY")
@@ -93,7 +119,7 @@ if __name__ == "__main__":
                     speak("YES BOSS")
                     print("Give Command")
                     with sr.Microphone() as source:
-                        audio = r.listen(source,timeout = 3,phrase_time_limit = 1)
+                        audio = r.listen(source,timeout = 6,phrase_time_limit = 3)
                         command = r.recognize_google(audio,language = 'en-US')
                         processCommand(command)
 

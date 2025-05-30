@@ -1,0 +1,1 @@
+clear_answer = answer.replace("*","")
